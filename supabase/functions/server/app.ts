@@ -29,6 +29,8 @@ import { requireAuth } from "./middleware/auth.ts";
 import type { AppEnv } from "./types.ts";
 import { communityRoutes } from "./modules/communities/routes.ts";
 import { knowledgeRoutes } from "./modules/knowledge/routes.ts";
+import { assistantRoutes } from "./modules/assistant/routes.ts";
+import { receiptRoutes } from "./modules/receipts/routes.ts";
 import { marketRoutes } from "./modules/market/routes.ts";
 import { messageItemRoutes } from "./modules/messages/routes.ts";
 import { profileRoutes } from "./modules/profiles/routes.ts";
@@ -95,10 +97,12 @@ export function createApp(cfg: AppConfig) {
   app.route("/v1/profiles", profileRoutes(auth));
   app.route("/v1/communities", communityRoutes(auth));
   app.route("/v1/messages", messageItemRoutes(auth));
+  app.route("/v1/messages", receiptRoutes(auth));
   app.route("/v1", voteRoutes(auth)); // routes carry their own auth; see voting/routes.ts
   app.route("/v1/market", marketRoutes(auth, cfg));
   app.route("/v1/weather", weatherRoutes(cfg));
   app.route("/v1/knowledge", knowledgeRoutes(auth, publicDb));
+  app.route("/v1/assistant", assistantRoutes(auth, publicDb));
 
   return app;
 }

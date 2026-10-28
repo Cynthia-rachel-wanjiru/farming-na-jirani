@@ -137,6 +137,56 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 ---
 
+## Backend (Supabase)
+
+The backend is a Hono API running as a Supabase Edge Function, with PostgreSQL migrations and row-level security.
+
+### Database and seed data
+
+Migrations live in `supabase/migrations/`, and `supabase/seed.sql` loads development data.
+
+```bash
+# Local: start Supabase, then rebuild the database from migrations and seed
+supabase start
+supabase db reset          # applies migrations, then runs supabase/seed.sql
+```
+
+The seed is idempotent, so `supabase db reset` is the supported way to refresh it. As a fallback, to re-run only the seed against an existing local database, use `psql` with the connection string from `supabase status`:
+
+```bash
+psql "$(supabase status -o env | grep DB_URL | cut -d= -f2- | tr -d '\"')" -f supabase/seed.sql
+```
+
+On a hosted project, do not run the seed on production. It creates demo users with a known password, and that is a development-only setup.
+
+The seed creates:
+
+- 24 demo users in `auth.users`, with profiles created by the `handle_new_user` trigger: 17 farmers, 4 cooperative leaders and 3 agricultural experts (the schema role is `expert`).
+- Demo password for every account: `FarmEcho!Demo2026`. Emails use the `@farmecho.test` domain, which cannot receive mail.
+- 4 communities in Nakuru, Kisumu, Uasin Gishu and Machakos, with memberships.
+- Echo messages with per-recipient read receipts (`delivered` or `read`), and a few live votes.
+- Market prices, marked as indicative, and 11 published knowledge articles in English and Swahili.
+
+Market prices and fertilizer rates are indicative. Confirm them with local data before you rely on them.
+
+### Assistant and read receipts
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/v1/assistant/ask` | Required | Answers a farming question from published articles, with citations, or from built-in advice. Body: `{ "question": "...", "language": "en" \| "sw" }`. |
+| `PUT` | `/v1/messages/:id/receipt` | Required | Sets a receipt to `delivered` or `read`. Forward only. |
+| `POST` | `/v1/messages/community/:communityId/read` | Required | Marks every unread message in a community as read. Returns the count. |
+
+The assistant returns `source: "knowledge"` with `citations` when it uses an article, and `source: "built_in"` when it falls back to built-in advice. It never returns a blank answer.
+
+### Tests
+
+```bash
+cd supabase/functions/server
+deno test -A tests/
+deno fmt --check . && deno lint . && deno check index.ts
+```
+
 ##  Deployment
 
 ### Vercel (Recommended)
