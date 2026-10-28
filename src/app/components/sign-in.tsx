@@ -3,6 +3,7 @@ import { User, UserRole } from '../App';
 import { ChevronLeft, LogIn, Globe, Eye, EyeOff } from 'lucide-react';
 import backgroundImage from 'figma:asset/4ff685ce06753bb8241b79c63a7aa3311c69db61.png';
 import logo from 'figma:asset/f071fbeb1656a03851eee645d222a7d311cf60d6.png';
+import { api } from '../lib/api';
 
 interface SignInProps {
   onSignIn: (user: User) => void;
@@ -67,23 +68,36 @@ export function SignIn({ onSignIn, onBack, onSignUp }: SignInProps) {
     },
   }[language];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     if (!phone.trim() || !password.trim()) {
       setError(t.error);
       return;
     }
-    const user: User = {
-      id: Date.now().toString(),
-      name: name.trim() || 'User',
-      phone: phone.trim(),
-      password: password.trim(),
-      role,
-      cooperative: role === 'farmer' ? 'Independent Farmer' : role === 'leader' ? 'My Cooperative' : 'Kenya Agricultural Board',
-      region: 'nairobi',
-      language,
-    };
-    onSignIn(user);
+    try {
+      // Try to login with email if looks like email, else use phone as email fallback? backend expects email
+      const email = phone.includes('@') ? phone.trim() : `${phone.trim().replace(/[^0-9]/g, '')}@farm.com`;
+      const res = await api.login({ email, password: password.trim() });
+      const apiUser = res.user;
+      const token = res.token;
+      if (token) {
+        localStorage.setItem('farm_echo_session_token', token);
+      }
+      const user: User = {
+        id: apiUser.id || Date.now().toString(),
+        name: apiUser.fullName || name.trim() || 'User',
+        phone: apiUser.phone || phone.trim(),
+        password: password.trim(),
+        role: apiUser.role === 'cooperative_leader' ? 'leader' : apiUser.role === 'agricultural_expert' ? 'expert' : 'farmer',
+        cooperative: apiUser.cooperative || (role === 'farmer' ? 'Independent Farmer' : role === 'leader' ? 'My Cooperative' : 'Kenya Agricultural Board'),
+        region: apiUser.location || apiUser.region || 'nairobi',
+        language,
+      };
+      onSignIn(user);
+    } catch (err: any) {
+      setError(err?.message || t.error);
+    }
   };
 
   const handleForgotPassword = (e: React.FormEvent) => {

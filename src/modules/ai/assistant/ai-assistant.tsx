@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, Send, Sparkles, Lightbulb, Droplets, Sprout, Bug, TrendingUp, Loader, ArrowLeft } from 'lucide-react';
 import { generateAIResponse } from '../knowledge/farming-knowledge-base';
+import { api } from '../../../app/lib/api';
 
 interface AIMessage {
   id: string;
@@ -88,8 +89,24 @@ export function AIAssistant({ language, userName, onBack }: AIAssistantProps) {
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
+    try {
+      const history = [...messages, userMessage].slice(-10).map(m => ({
+        role: m.isUser ? 'user' : 'assistant',
+        content: m.content
+      }));
+      const sessionToken = localStorage.getItem('farm_echo_session_token');
+      const result = await api.chatAI(history, language, sessionToken);
+      
+      const aiResponse: AIMessage = {
+        id: (Date.now() + 1).toString(),
+        content: result?.response || generateAIResponse(textToSend, language),
+        isUser: false,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    } catch (error) {
       const aiResponse: AIMessage = {
         id: (Date.now() + 1).toString(),
         content: generateAIResponse(textToSend, language),
@@ -99,7 +116,7 @@ export function AIAssistant({ language, userName, onBack }: AIAssistantProps) {
 
       setMessages(prev => [...prev, aiResponse]);
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleQuickQuestion = (query: string) => {

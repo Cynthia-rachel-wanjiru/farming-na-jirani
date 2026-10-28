@@ -3,6 +3,7 @@ import { User, UserRole } from '../App';
 import { ChevronRight, Globe, Eye, EyeOff, ChevronLeft } from 'lucide-react';
 import backgroundImage from 'figma:asset/4ff685ce06753bb8241b79c63a7aa3311c69db61.png';
 import logo from 'figma:asset/f071fbeb1656a03851eee645d222a7d311cf60d6.png';
+import { api } from '../lib/api';
 
 interface OnboardingProps {
   onComplete: (user: User) => void;
@@ -92,15 +93,44 @@ export function Onboarding({ onComplete, onSignIn }: OnboardingProps) {
     { value: 'transnzoia', label: t.transnzoia },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user: User = {
-      id: Date.now().toString(),
-      ...formData,
-      cooperative: hasCooperative ? formData.cooperative : t.independentFarmer,
-      language,
-    };
-    onComplete(user);
+    try {
+      const roleMap = formData.role === 'leader' ? 'cooperative_leader' : formData.role === 'expert' ? 'agricultural_expert' : 'farmer';
+      const email = formData.phone.includes('@') ? formData.phone : `${formData.phone.replace(/[^0-9]/g, '')}@farm.com`;
+      const res = await api.register({
+        fullName: formData.name,
+        email,
+        phone: formData.phone,
+        password: formData.password,
+        role: roleMap,
+      });
+      const apiUser = res.user;
+      const token = res.token;
+      if (token) {
+        localStorage.setItem('farm_echo_session_token', token);
+      }
+      const user: User = {
+        id: apiUser.id || Date.now().toString(),
+        name: apiUser.fullName || formData.name,
+        role: formData.role,
+        cooperative: hasCooperative ? formData.cooperative : t.independentFarmer,
+        region: formData.region || apiUser.location || 'nairobi',
+        language,
+        phone: apiUser.phone || formData.phone,
+        password: formData.password,
+      };
+      onComplete(user);
+    } catch (err: any) {
+      console.error(err);
+      const user: User = {
+        id: Date.now().toString(),
+        ...formData,
+        cooperative: hasCooperative ? formData.cooperative : t.independentFarmer,
+        language,
+      };
+      onComplete(user);
+    }
   };
 
   return (
