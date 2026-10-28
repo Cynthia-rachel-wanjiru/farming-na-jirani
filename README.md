@@ -99,7 +99,7 @@ farmecho/
 
 ## Running Farm Echo
 
-Open  https://farming-echo.vercel.app/
+Open  https://farmingnajirani.vercel.app/
 
 ##  Tech Stack
 
@@ -125,6 +125,5 @@ Open  https://farming-echo.vercel.app/
 4. Push: `git push origin feature/your-feature`
 5. Open a Pull Request
 
-Click to view  https://farming-echo.vercel.app/
-
+Click to view  https://farmingnajirani.vercel.app/
 **Built with love for Kenyan farmers** | *Empowering communities through digital connectivity*
